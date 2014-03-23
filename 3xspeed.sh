@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # 3xSpeed v0.01 by dant(dantmnf2 at gmail.com)
-# Licensed under WTFPL(http://www.wtfpl.net/txt/copying)
 
 WORKDIR="/tmp/3xSpeed-$(uuidgen)"
 

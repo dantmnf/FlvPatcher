@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # Blacker v0.01 by dant(dantmnf2 at gmail.com)
-# Licensed under WTFPL(http://www.wtfpl.net/txt/copying)
-# How to recover: delete the last 3 frames
 
 WORKDIR="/tmp/Blacker-$(uuidgen)"
 
