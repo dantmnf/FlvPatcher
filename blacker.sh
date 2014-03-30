@@ -9,9 +9,9 @@ usage() {
 }
 
 set_bitrate() { # $1: bitrate
-	target_bitrate=${1/[kK]/000:=990000}
-	target_bitrate=${target_bitrate:-990000}
-	echo "INFO:    target bitrate is ${target_bitrate} bps"
+        target_bitrate=${target_bitrate:-990000}
+	target_bitrate=${1/[kK]/000}
+	echo "INFO:    target bitrate is ${target_bitrate}bps"
 }
 
 parse_commandline() {
