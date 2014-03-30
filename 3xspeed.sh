@@ -2,6 +2,16 @@
 
 # 3xSpeed v0.01 by dant(dantmnf2 at gmail.com)
 
+
+
+
+
+# !!!!!!! UNUSABLE !!!!!!!
+
+
+
+
+
 WORKDIR="/tmp/3xSpeed-$(uuidgen)"
 
 usage() {
