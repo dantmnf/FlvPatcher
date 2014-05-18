@@ -74,11 +74,12 @@ execute() {
 	fi
 
 	# index the input file
-	ffmsindex -c "$inputfile" "$WORKDIR/tc" >/dev/null
-	tcfile="$WORKDIR/tc_track00.tc.txt"
+	# according to issue#2, use ffmpeg/avconv instead of ffms2
+	tcfile="$WORKDIR/tc.txt"
+	ffmpeg -v 0 -i "$inputfile" -c:v copy -an -f mkvtimestamp_v2 -- "$tcfile"
 	if [ ! -e $tcfile ];then
 		echo "ERROR:   cannot analyze the input file."
-		echo "INFO:    please check whether a working ffmsindex is installed on your system"
+		echo "INFO:    please check whether your ffmpeg supports 'mkvtimestamp_v2' format"
 		exit 1
 	fi
 
