@@ -9,8 +9,8 @@ usage() {
 }
 
 set_bitrate() { # $1: bitrate
-        target_bitrate=${target_bitrate:-990000}
-	target_bitrate=${1/[kK]/000}
+	target_bitrate=${1:-990000}
+	target_bitrate=${target_bitrate/[kK]/000}
 	echo "INFO:    target bitrate is ${target_bitrate}bps"
 }
 
@@ -54,18 +54,25 @@ check() {
 		if rm -d -- $outputfile;then
 			echo "INFO:    overriding ${outputfile}"
 		else
-			echo "ERROR:   failed to override ${outputfile}"
+			echo "ERROR:   not overriding"
 			exit 1
 		fi
 	fi
 
+	# check ffmpeg/avconv
+	which ffmpeg &>/dev/null && ffmpeg=ffmpeg
+	which avconv &>/dev/null && ffmpeg=avconv
+	if [ -z "$ffmpeg" ];then
+		echo "ERROR:   no ffmpeg or avconv found"
+		exit 1
+	fi
 
 }
 
 execute() {
 	mkdir -p "$WORKDIR"
 	# remux the input file to flv and measure the size
-	flvsize=$(ffmpeg -v 0 -i "$inputfile" -c copy -f flv - | wc -c)
+	flvsize=$($ffmpeg -v 0 -i "$inputfile" -c copy -f flv - | wc -c)
 	if (( $flvsize == 0 ));then
 		echo "ERROR:   cannot analyze the input file."
 		echo "INFO:    please check whether ffmpeg is a recent version which can also remux"
@@ -76,7 +83,7 @@ execute() {
 	# index the input file
 	# according to issue#2, use ffmpeg/avconv instead of ffms2
 	tcfile="$WORKDIR/tc.txt"
-	ffmpeg -v 0 -i "$inputfile" -c:v copy -an -f mkvtimestamp_v2 -- "$tcfile"
+	$ffmpeg -v 0 -i "$inputfile" -c:v copy -an -f mkvtimestamp_v2 -- "$tcfile"
 	if [ ! -e $tcfile ];then
 		echo "ERROR:   cannot analyze the input file."
 		echo "INFO:    please check whether your ffmpeg supports 'mkvtimestamp_v2' format"
@@ -84,8 +91,8 @@ execute() {
 	fi
 
 	# create a black patch
-	ffmpeg -v 0 -i "$inputfile" -c copy -frames:v 3 -- "$WORKDIR/patch.mkv"
-	patchsize=$(ffmpeg -v 0 -i "$WORKDIR/patch.mkv" -c copy -f flv - | wc -c)
+	$ffmpeg -v 0 -i "$inputfile" -c copy -frames:v 3 -- "$WORKDIR/patch.mkv"
+	patchsize=$($ffmpeg -v 0 -i "$WORKDIR/patch.mkv" -c copy -f flv - | wc -c)
 
 	# modify the timecode
 	blacktime1=$(echo "scale=8;((${flvsize}+${patchsize})/${target_bitrate})*8000" | bc)
@@ -100,7 +107,7 @@ execute() {
 	'(' "$inputfile" ')' '+' '(' "$WORKDIR/patch.mkv" ')'        \
 	--track-order "0:0,0:1" >/dev/null #--append-to "1:0:0:0" & >/dev/null
 
-	ffmpeg -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f flv -y -- "$outputfile" 
+	$ffmpeg -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f flv -y -- "$outputfile" 
 
 	# clean up
 	rm -rf -- $WORKDIR
