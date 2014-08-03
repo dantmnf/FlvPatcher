@@ -73,6 +73,7 @@ execute() {
 	mkdir -p "$WORKDIR"
 	# remux the input file to flv and measure the size
 	flvsize=$($ffmpeg -v 0 -i "$inputfile" -c copy -f flv - | wc -c)
+    echo "INFO: Trying to remux the file and measure the size..."
 	if (( $flvsize == 0 ));then
 		echo "ERROR:   cannot analyze the input file."
 		echo "INFO:    please check whether ffmpeg is a recent version which can also remux"
@@ -83,6 +84,7 @@ execute() {
 	# index the input file
 	# according to issue#2, use ffmpeg/avconv instead of ffms2
 	tcfile="$WORKDIR/tc.txt"
+    echo "INFO: Trying to index the file..."
 	$ffmpeg -v 0 -i "$inputfile" -c:v copy -an -f mkvtimestamp_v2 -- "$tcfile"
 	if [ ! -e $tcfile ];then
 		echo "ERROR:   cannot analyze the input file."
@@ -92,6 +94,8 @@ execute() {
 
 	# create a black patch
 	$ffmpeg -v 0 -i "$inputfile" -c copy -frames:v 3 -- "$WORKDIR/patch.mkv"
+    echo "INFO: Trying to create the patch..."
+    
 	patchsize=$($ffmpeg -v 0 -i "$WORKDIR/patch.mkv" -c copy -f flv - | wc -c)
 
 	# modify the timecode
@@ -103,12 +107,17 @@ execute() {
 	echo $blacktime2 >> $tcfile
 	echo $blacktime3 >> $tcfile
 
+    echo "INFO: Trying to mux the patch file..."
+    
 	mkvmerge -o "$WORKDIR/upload.mkv" --timecodes "0:$tcfile" \
 	'(' "$inputfile" ')' '+' '(' "$WORKDIR/patch.mkv" ')'        \
 	--track-order "0:0,0:1" >/dev/null #--append-to "1:0:0:0" & >/dev/null
-
+    
+    echo "INFO: Trying to make the flv file..."
 	$ffmpeg -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f flv -y -- "$WORKDIR/out.flv" 
 	rm -f -- "$WORKDIR/upload.mkv"
+    echo "INFO: Trying to make the final output file..."
+
 	$ffmpeg -v 0 -i "$WORKDIR/out.flv" -c copy -f mp4 -y -- "$outputfile" 
 
 	# clean up
