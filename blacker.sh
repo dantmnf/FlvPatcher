@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Blacker v0.01 by dant(dantmnf2 at gmail.com)
+# Blacker v0.02 by Beining(cnbeining[at]gmail.com), original author: dant(dantmnf2 at gmail.com)
 
 WORKDIR="/tmp/Blacker-$(uuidgen)"
 
@@ -9,7 +9,7 @@ usage() {
 }
 
 set_bitrate() { # $1: bitrate
-	target_bitrate=${1:-990000}
+	target_bitrate=${1:-1990000}
 	target_bitrate=${target_bitrate/[kK]/000}
 	echo "INFO:    target bitrate is ${target_bitrate}bps"
 }
@@ -107,7 +107,7 @@ execute() {
 	'(' "$inputfile" ')' '+' '(' "$WORKDIR/patch.mkv" ')'        \
 	--track-order "0:0,0:1" >/dev/null #--append-to "1:0:0:0" & >/dev/null
 
-	$ffmpeg -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f flv -y -- "$outputfile" 
+	$ffmpeg -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f mp4 -y -- "$outputfile" 
 
 	# clean up
 	rm -rf -- $WORKDIR
