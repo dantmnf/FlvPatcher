@@ -107,7 +107,9 @@ execute() {
 	'(' "$inputfile" ')' '+' '(' "$WORKDIR/patch.mkv" ')'        \
 	--track-order "0:0,0:1" >/dev/null #--append-to "1:0:0:0" & >/dev/null
 
-	$ffmpeg -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f mp4 -y -- "$outputfile" 
+	$ffmpeg -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f flv -y -- "$WORKDIR/out.flv" 
+	rm -rf -- "$WORKDIR/upload.mkv"
+	$ffmpeg -v 0 -f matroska -i "$WORKDIR/out.flv" -c copy -f mp4 -y -- "$outputfile" 
 
 	# clean up
 	rm -rf -- $WORKDIR
