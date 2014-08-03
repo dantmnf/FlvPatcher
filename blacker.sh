@@ -36,7 +36,7 @@ parse_commandline() {
 		exit 1
 	fi
 	set_bitrate $br
-	outputfile=${2:-${inputfile}.upload.flv}
+	outputfile=${2:-${inputfile}.upload.mp4}
 }
 
 check() {
