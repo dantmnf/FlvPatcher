@@ -6,6 +6,8 @@ WORKDIR="/tmp/Blacker-$(uuidgen)"
 
 usage() {
 	echo "usage: $(basename $0) [-b target_bitrate] inputfile [outputfile]"
+	echo "notes: * set $FFMPEG to 'avconv' if you want to use LibAV"
+	echo "       * output file will be in QuickTime mov format (similar to MP4)"
 }
 
 set_bitrate() { # $1: bitrate
@@ -51,7 +53,7 @@ check() {
 			echo "INFO:    exiting..."
 			exit 1
 		fi
-		if rm -d -- $outputfile;then
+		if rm -d -- "$outputfile";then
 			echo "INFO:    overriding ${outputfile}"
 		else
 			echo "ERROR:   not overriding"
@@ -59,11 +61,9 @@ check() {
 		fi
 	fi
 
-	# check ffmpeg/avconv
-	which ffmpeg &>/dev/null && ffmpeg=ffmpeg
-	which avconv &>/dev/null && ffmpeg=avconv
-	if [ -z "$ffmpeg" ];then
-		echo "ERROR:   no ffmpeg or avconv found"
+	FFMPEG=${FFMPEG:=ffmpeg}
+	if [ -z "$FFMPEG" ];then
+		echo "ERROR:   no ffmpeg found"
 		exit 1
 	fi
 
@@ -71,21 +71,22 @@ check() {
 
 execute() {
 	mkdir -p "$WORKDIR"
-	# remux the input file to flv and measure the size
-	flvsize=$($ffmpeg -v 0 -i "$inputfile" -c copy -f flv - | wc -c)
-    echo "INFO: Trying to remux the file and measure the size..."
+
+	echo "INFO: measuring the size of video stream..."
+	flvsize=$("$FFMPEG" -v 0 -i "$inputfile" -c:v copy -an -f rawvideo - | wc -c)
+  
 	if (( $flvsize == 0 ));then
 		echo "ERROR:   cannot analyze the input file."
-		echo "INFO:    please check whether ffmpeg is a recent version which can also remux"
-		echo "         media files, and make sure your input file can be remuxed to FLV."
+		#echo "INFO:    please check whether ffmpeg is a recent version which can also remux"
+		#echo "         media files, and make sure your input file can be remuxed to FLV."
 		exit 1
 	fi
 
 	# index the input file
 	# according to issue#2, use ffmpeg/avconv instead of ffms2
 	tcfile="$WORKDIR/tc.txt"
-    echo "INFO: Trying to index the file..."
-	$ffmpeg -v 0 -i "$inputfile" -c:v copy -an -f mkvtimestamp_v2 -- "$tcfile"
+  echo "INFO: indexing the file..."
+	"$FFMPEG" -v 0 -i "$inputfile" -c:v copy -an -f mkvtimestamp_v2 -- "$tcfile"
 	if [ ! -e $tcfile ];then
 		echo "ERROR:   cannot analyze the input file."
 		echo "INFO:    please check whether your ffmpeg supports 'mkvtimestamp_v2' format"
@@ -93,10 +94,11 @@ execute() {
 	fi
 
 	# create a black patch
-	$ffmpeg -v 0 -i "$inputfile" -c copy -frames:v 3 -- "$WORKDIR/patch.mkv"
-    echo "INFO: Trying to create the patch..."
+	echo "INFO: creating the patch..."
+	"$FFMPEG" -v 0 -i "$inputfile" -c copy -frames:v 3 -- "$WORKDIR/patch.mkv"
+  echo "INFO: Trying to create the patch..."
     
-	patchsize=$($ffmpeg -v 0 -i "$WORKDIR/patch.mkv" -c copy -f flv - | wc -c)
+	patchsize=$("$FFMPEG" -v 0 -i "$WORKDIR/patch.mkv" -c:v copy -f rawvideo - | wc -c)
 
 	# modify the timecode
 	blacktime1=$(echo "scale=8;((${flvsize}+${patchsize})/${target_bitrate})*8000" | bc)
@@ -107,18 +109,15 @@ execute() {
 	echo $blacktime2 >> $tcfile
 	echo $blacktime3 >> $tcfile
 
-    echo "INFO: Trying to mux the patch file..."
+  echo "INFO: applying the patch..."
     
 	mkvmerge -o "$WORKDIR/upload.mkv" --timecodes "0:$tcfile" \
 	'(' "$inputfile" ')' '+' '(' "$WORKDIR/patch.mkv" ')'        \
 	--track-order "0:0,0:1" >/dev/null #--append-to "1:0:0:0" & >/dev/null
-    
-    echo "INFO: Trying to make the flv file..."
-	$ffmpeg -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f flv -y -- "$WORKDIR/out.flv" 
-	rm -f -- "$WORKDIR/upload.mkv"
-    echo "INFO: Trying to make the final output file..."
 
-	$ffmpeg -v 0 -i "$WORKDIR/out.flv" -c copy -f mp4 -y -- "$outputfile" 
+  echo "INFO: making the output file..."
+
+	"$FFMPEG" -v 0 -f matroska -i "$WORKDIR/upload.mkv" -c copy -f mov -movflags +faststart -y -- "$outputfile" 
 
 	# clean up
 	rm -rf -- $WORKDIR
